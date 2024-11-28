@@ -28,3 +28,17 @@ class TransitionDataset(Dataset):
             torch.tensor(action, dtype=torch.float32),
             torch.tensor(next_state, dtype=torch.float32),
         )
+
+
+class RewardDataset(torch.utils.data.Dataset):
+    def __init__(self, transitions):
+        self.data = [
+            (torch.tensor(state, dtype=torch.float32), torch.tensor([reward], dtype=torch.float32))
+            for state, reward in transitions
+        ]
+
+    def __len__(self):
+        return len(self.data)
+
+    def __getitem__(self, idx):
+        return self.data[idx]

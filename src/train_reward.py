@@ -2,8 +2,8 @@ import gymnasium as gym
 import torch
 import torch.nn as nn
 
-from Dataset import RewardDataset
-from RewardModel import RewardModel
+from src.Dataset import RewardDataset
+from src.RewardModel import RewardModel
 
 # Raccogliere i dati di addestramento
 def collect_reward_data(env, steps):

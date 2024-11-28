@@ -5,8 +5,8 @@ import torch.optim as optim
 from torch.utils.data import DataLoader
 import numpy as np 
 
-from TransitionModel import TransitionModel
-from Dataset import TransitionDataset
+from src.TransitionModel import TransitionModel
+from src.Dataset import TransitionDataset
 
 #hyperparam: 
 STATE_DIM = 6

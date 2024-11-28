@@ -4,11 +4,6 @@ import numpy as np
 
 class TransitionDataset(Dataset):
     def __init__(self, transitions):
-        """
-        Args:
-            transitions (list): Lista di tuple (state, action, next_state).
-        """
-        # Converte in NumPy array per verificare che tutti i dati siano consistenti
         self.data = [
             (
                 np.array(state, dtype=np.float32),
@@ -42,3 +37,14 @@ class RewardDataset(torch.utils.data.Dataset):
 
     def __getitem__(self, idx):
         return self.data[idx]
+    
+class ValueDataset(torch.utils.data.Dataset):
+    def __init__(self, states, target_values):
+        self.states = torch.tensor(states, dtype=torch.float32)
+        self.target_values = torch.tensor(target_values, dtype=torch.float32).unsqueeze(1)
+
+    def __len__(self):
+        return len(self.states)
+
+    def __getitem__(self, idx):
+        return self.states[idx], self.target_values[idx]

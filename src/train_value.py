@@ -1,123 +1,116 @@
 import gymnasium as gym
-import numpy as np
 import torch
-from torch.utils.data import DataLoader
 import torch.nn as nn
-
+import torch.optim as optim
+from torch.utils.data import DataLoader
+import numpy as np
 from ValueModel import ValueModel
 from Dataset import ValueDataset
 
-STATE_DIM = 6  
-ACTION_DIM = 3
-HIDDEN_UNITS = [128, 128]  
-LEARNING_RATE = 1e-3  
-BATCH_SIZE = 64  
-EPOCHS = 50  
-DISCOUNT_FACTOR = 0.99  
-EPSILON = 0.1  
-NUM_EPISODES = 100 
 
-
-torch.cuda.empty_cache()
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-
-def collect_data(env, num_episodes, value_model, epsilon=0.1, discount_factor=0.99, device="cpu"):
+# Funzione per raccogliere dati per addestrare il Value Model
+def collect_value_data(env, episodes=100, max_steps=500, gamma=0.99):
     states = []
     target_values = []
-
-    for episode in range(num_episodes):
-        state, _ = env.reset()
+    for episode in range(episodes):
         episode_states = []
-        rewards = []
-
-        done = False
-        while not done:
-            # Converti lo stato in un tensor
-            state_tensor = torch.tensor(state, dtype=torch.float32, device=device).unsqueeze(0)
-
-            # Epsilon-greedy: scegli l'azione
-            if np.random.rand() < epsilon:
-                action = env.action_space.sample()  # Esplorazione casuale
-            else:
-                # Sfrutta il Value Model per scegliere l'azione che minimizza il valore (reward negativa)
-                with torch.no_grad():
-                    # Calcola i valori delle azioni previste
-                    q_values = [
-                        value_model(torch.cat([state_tensor, torch.eye(env.action_space.n, device=device)[a].unsqueeze(0)], dim=-1)).item()
-                        for a in range(env.action_space.n)
-                    ]
-                action = np.argmin(q_values)  # Azione con il minimo valore previsto
-
-            # Interagisci con l'ambiente
-            next_state, reward, terminated, truncated, _ = env.step(action)
-
-            # Salva lo stato e la ricompensa
+        episode_rewards = []
+        state, _ = env.reset()
+        for _ in range(max_steps):
+            action = env.action_space.sample()  # Azione casuale
+            next_state, reward, done, _, _ = env.step(action)
             episode_states.append(state)
-            rewards.append(reward)
-
+            episode_rewards.append(reward)
             state = next_state
-            done = terminated or truncated
+            if done:
+                break
 
-        # Calcola i valori cumulativi scontati per l'episodio
-        returns = compute_discounted_rewards(rewards, discount_factor)
+        # Calcolo dei target values usando il ritorno scontato
+        G = 0
+        for reward in reversed(episode_rewards):
+            G = reward + gamma * G
+            target_values.insert(0, G)  # Inserisce G all'inizio per mantenere l'ordine corretto
+
         states.extend(episode_states)
-        target_values.extend(returns)
 
-    return states, target_values
-
-def compute_discounted_rewards(rewards, discount_factor):
-    discounted_rewards = []
-    cumulative_reward = 0.0
-    for reward in reversed(rewards):
-        cumulative_reward = reward + discount_factor * cumulative_reward
-        discounted_rewards.insert(0, cumulative_reward)  # Inserisci in ordine inverso
-    return discounted_rewards
+    return np.array(states, dtype=np.float32), np.array(target_values, dtype=np.float32)
 
 
-def train_value_model(model, dataloader, optimizer, criterion, epochs):
-    model.train()
+# Funzione per addestrare il Value Model con Early Stopping
+def train_value_model(model, dataloader, optimizer, criterion, epochs=50, patience=10, device='cpu'):
+    model.to(device)
+    best_loss = float('inf')
+    epochs_no_improve = 0
+
     for epoch in range(epochs):
-        epoch_loss = 0.0
-        for state, target_value in dataloader:
+        model.train()
+        total_loss = 0.0
+
+        for states, target_values in dataloader:
+            states = states.to(device)
+            target_values = target_values.to(device)
+
             optimizer.zero_grad()
-
-            # Predizione del valore
-            predicted_value = model(state)
-
-            # Calcolo della perdita
-            loss = criterion(predicted_value, target_value)
+            outputs = model(states)
+            loss = criterion(outputs, target_values)
             loss.backward()
             optimizer.step()
 
-            epoch_loss += loss.item()
+            total_loss += loss.item()
 
-        print(f"Epoch [{epoch + 1}/{epochs}], Loss: {epoch_loss / len(dataloader):.4f}")
+        avg_loss = total_loss / len(dataloader)
+        print(f"Epoch {epoch + 1}/{epochs}, Loss: {avg_loss:.4f}")
+
+        # Early Stopping
+        if avg_loss < best_loss:
+            best_loss = avg_loss
+            epochs_no_improve = 0
+            torch.save(model.state_dict(), "best_value_model.pth")  # Salva il miglior modello
+        else:
+            epochs_no_improve += 1
+            if epochs_no_improve >= patience:
+                print(f"Early stopping at epoch {epoch + 1}")
+                break
 
 
-if __name__ == '__main__':
-    env = gym.make("Acrobot-v1")
-    value_model = ValueModel(input_dim=STATE_DIM + ACTION_DIM).to(device)
+def main():
+    # Configurazioni
+    env_name = "Acrobot-v1"
+    episodes = 200
+    batch_size = 32
+    learning_rate = 5e-4
+    epochs = 100
+    patience = 10  # Early stopping patience
+    gamma = 0.99  # Fattore di sconto
 
-    # Raccogli i dati con epsilon-greedy
-    print("Raccolta dei dati...")
-    states, target_values = collect_data(
-        env, num_episodes=NUM_EPISODES, value_model=value_model, epsilon=EPSILON, discount_factor=DISCOUNT_FACTOR, device=device
-    )
-    print(f"Numero di stati raccolti: {len(states)}")
+    # Seleziona il dispositivo
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    print(f"Using device: {device}")
 
-    # Crea il dataset e il dataloader
+    # Inizializza l'ambiente
+    env = gym.make(env_name)
+
+    # Raccogli dati per il Value Model
+    print("Collecting value data...")
+    states, target_values = collect_value_data(env, episodes=episodes, gamma=gamma)
+
+    # Creazione del dataset e DataLoader
     dataset = ValueDataset(states, target_values)
-    dataloader = DataLoader(dataset, batch_size=BATCH_SIZE, shuffle=True)
+    dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
 
-    # Configura l'ottimizzatore e la funzione di perdita
-    optimizer = torch.optim.Adam(value_model.parameters(), lr=LEARNING_RATE)
-    criterion = nn.MSELoss()
+    # Definizione del Value Model
+    print("Initializing value model...")
+    input_dim = states.shape[1]
+    model = ValueModel(input_dim=input_dim)
+    optimizer = optim.Adam(model.parameters(), lr=learning_rate)
+    criterion = nn.MSELoss()  # Loss per minimizzare la differenza tra predizioni e target values
 
-    # Addestra il Value Model
-    print("Inizio addestramento del Value Model...")
-    train_value_model(value_model, dataloader, optimizer, criterion, EPOCHS)
+    # Addestramento del modello con Early Stopping
+    print("Training value model...")
+    train_value_model(model, dataloader, optimizer, criterion, epochs=epochs, patience=patience, device=device)
 
-    # Salva il modello addestrato
-    torch.save(value_model.state_dict(), "value_model.pth")
-    print("Modello salvato in 'value_model.pth'")
+    print("Training complete. Best model saved as 'best_value_model.pth'")
+
+
+if __name__ == "__main__":
+    main()

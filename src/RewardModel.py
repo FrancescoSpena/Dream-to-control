@@ -2,16 +2,7 @@ import torch
 import torch.nn as nn
 
 class RewardModel(nn.Module):
-    def __init__(self, state_dim, hidden_units=[64, 64], activation=nn.ReLU):
-        """
-        Reward Model per l'ambiente Acrobot.
-        Predice ricompense scalari per stati specifici.
-
-        Args:
-            state_dim (int): Dimensione del vettore di stato.
-            hidden_units (list): Numero di neuroni per ogni livello nascosto.
-            activation (torch.nn.Module): Funzione di attivazione da utilizzare nei livelli nascosti.
-        """
+    def __init__(self, state_dim, hidden_units=[32, 32], activation=nn.ReLU):
         super(RewardModel, self).__init__()
 
         # Livelli nascosti
@@ -28,15 +19,6 @@ class RewardModel(nn.Module):
         self.network = nn.Sequential(*layers)
 
     def forward(self, state):
-        """
-        Forward pass del Reward Model.
-
-        Args:
-            state (torch.Tensor): Tensor dello stato corrente (batch_size, state_dim).
-
-        Returns:
-            torch.Tensor: Ricompensa prevista (batch_size, 1).
-        """
         return self.network(state)
 
 

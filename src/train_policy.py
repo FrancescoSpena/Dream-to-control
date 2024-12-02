@@ -97,7 +97,7 @@ def main():
     buffer = deque(maxlen=buffer_size)
 
     print("Collecting experience...")
-    collect_experience(env, policy_model, buffer, episodes=100)
+    collect_experience(env, policy_model, buffer)
 
     print("Training models...")
     policy_losses, value_losses = train(

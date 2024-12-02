@@ -13,9 +13,7 @@ class RewardModel(nn.Module):
             layers.append(activation())
             input_dim = units
 
-        # Livello di output
-        layers.append(nn.Linear(input_dim, 1))  # Ricompensa scalare
-        
+        layers.append(nn.Linear(input_dim, 1)) 
         self.network = nn.Sequential(*layers)
 
     def forward(self, state):

@@ -2,23 +2,13 @@ import gymnasium as gym
 import torch 
 import torch.nn as nn 
 import torch.optim as optim 
+import numpy as np
 from torch.utils.data import DataLoader
-import numpy as np 
 
 from TransitionModel import TransitionModel
 from Dataset import TransitionDataset
 
-#hyperparam: 
-STATE_DIM = 6
-ACTION_DIM = 3 
-HIDDEN_UNITS = [128,128]
-LR = 1e-3
-BATCH_SIZE = 64
-EPOCHS = 100 
-ENV_STEPS = 5000
-
-
-def collect_data(env, steps):
+def collect_data(env, steps, state_dim, action_dim):
     transitions = []
     state, _ = env.reset()  # Estrai lo stato dalla tupla (state, info)
     for _ in range(steps):
@@ -31,11 +21,11 @@ def collect_data(env, steps):
         if not isinstance(next_state, np.ndarray):
             next_state = np.array(next_state)
 
-        if state.shape != (STATE_DIM,) or next_state.shape != (STATE_DIM,):
+        if state.shape != (state_dim,) or next_state.shape != (state_dim,):
             continue  # Ignora stati non validi
 
         # One-hot encode dell'azione
-        action_one_hot = np.zeros(ACTION_DIM)
+        action_one_hot = np.zeros(action_dim)
         action_one_hot[action] = 1
 
         # Salva la transizione
@@ -46,7 +36,6 @@ def collect_data(env, steps):
         if terminated or truncated:
             state, _ = env.reset()  # Estrai lo stato dalla tupla
     return transitions
-
 
 def train(model, dataloader, optimizer, criterion, epochs):
     model.train()
@@ -63,30 +52,33 @@ def train(model, dataloader, optimizer, criterion, epochs):
 
             epoch_loss += loss.item()
 
-    print(f"Epoch [{epoch + 1}/{epochs}], Loss: {epoch_loss / len(dataloader):.4f}")
+        if epoch % 10 == 0:
+            print(f"Epoch [{epoch + 1}/{epochs}], Loss: {epoch_loss / len(dataloader):.4f}")
 
 
-# Main script
 if __name__ == "__main__":
-    # Inizializza l'ambiente
     env = gym.make("Acrobot-v1")
 
-    # Raccogli i dati
-    print("Raccolta dei dati...")
-    transitions = collect_data(env, ENV_STEPS)
-    dataset = TransitionDataset(transitions)
-    dataloader = DataLoader(dataset, batch_size=BATCH_SIZE, shuffle=True)
+    bath_size = 64
+    state_dim = env.observation_space.shape[0]
+    action_dim = env.action_space.n 
 
-    # Inizializza il modello, l'ottimizzatore e la funzione di perdita
-    model = TransitionModel(STATE_DIM, ACTION_DIM, hidden_units=HIDDEN_UNITS)
-    optimizer = optim.Adam(model.parameters(), lr=LR)
+    epochs = 100
+    lr = 1e-4
+
+    print("Collect data...")
+    transitions = collect_data(env,10000,state_dim=state_dim,action_dim=action_dim)
+    
+    dataset = TransitionDataset(transitions)
+    dataloader = DataLoader(dataset, batch_size=bath_size, shuffle=True)
+
+    model = TransitionModel(state_dim, action_dim)
+    optimizer = optim.Adam(model.parameters(), lr=lr)
     criterion = nn.MSELoss()
 
-    # Addestramento
-    print("Inizio addestramento...")
-    train(model, dataloader, optimizer, criterion, EPOCHS)
+    print("Starting training...")
+    train(model, dataloader, optimizer, criterion, epochs)
 
-    # Salvataggio del modello
     torch.save(model.state_dict(), "transition_model.pth")
-    print("Modello salvato in 'transition_model.pth'")
+    print("Modello saved as 'transition_model.pth'")
 

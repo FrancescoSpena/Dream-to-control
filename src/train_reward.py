@@ -12,17 +12,34 @@ torch.cuda.empty_cache()
 
 
 # Funzione per raccogliere dati dall'ambiente
-def collect_data(env, episodes=100, max_steps=500):
+def collect_data(env, steps=10000, max_steps=500):
     transitions = []
-    for episode in range(episodes):
-        state, _ = env.reset()
-        for _ in range(max_steps):
-            action = env.action_space.sample()  
-            next_state, reward, done, _, _ = env.step(action)
-            transitions.append((state, reward))
-            state = next_state
-            if done:
-                break
+    state, _ = env.reset()  # Inizializza l'ambiente
+    state_dim = env.observation_space.shape[0]
+    step_count = 0
+
+    while len(transitions) < steps:
+        action = env.action_space.sample()  # Azione casuale
+        next_state, reward, terminated, truncated, _ = env.step(action)
+
+        # Controllo che lo stato sia un array numpy della dimensione corretta
+        if not isinstance(state, np.ndarray):
+            state = np.array(state)
+        if state.shape != (state_dim,):
+            continue  # Salta se la dimensione dello stato non è valida
+
+        # Salva lo stato e il reward come tuple
+        transitions.append((state, reward))
+        step_count += 1
+
+        # Aggiorna lo stato
+        state = next_state
+
+        # Reset dell'ambiente se l'episodio termina o si raggiunge il max_steps
+        if terminated or truncated or step_count >= max_steps:
+            state, _ = env.reset()
+            step_count = 0
+
     return transitions
 
 
@@ -79,7 +96,6 @@ def train_model(model, train_loader, val_loader, optimizer, criterion, epochs=50
 def main():
     # Configurazioni
     env_name = "Acrobot-v1"
-    episodes = 500
     batch_size = 32
     learning_rate = 1e-3
     weight_decay = 1e-4
@@ -91,7 +107,7 @@ def main():
     state_dim = env.observation_space.shape[0]
 
     print("Collecting data...")
-    transitions = collect_data(env, episodes=episodes)
+    transitions = collect_data(env)
 
     dataset = RewardDataset(transitions)
     train_size = int(0.8 * len(dataset))

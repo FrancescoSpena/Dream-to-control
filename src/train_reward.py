@@ -79,7 +79,7 @@ def train_model(model, train_loader, val_loader, optimizer, criterion, epochs=50
 def main():
     # Configurazioni
     env_name = "Acrobot-v1"
-    episodes = 200
+    episodes = 500
     batch_size = 32
     learning_rate = 1e-3
     weight_decay = 1e-4

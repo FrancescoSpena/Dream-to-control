@@ -5,16 +5,16 @@ import torch.optim as optim
 from torch.utils.data import DataLoader
 import numpy as np 
 
-from src.TransitionModel import TransitionModel
-from src.Dataset import TransitionDataset
+from TransitionModel import TransitionModel
+from Dataset import TransitionDataset
 
 #hyperparam: 
 STATE_DIM = 6
 ACTION_DIM = 3 
 HIDDEN_UNITS = [128,128]
 LR = 1e-3
-BATCH_SIZE = 65
-EPOCHS = 50 
+BATCH_SIZE = 64
+EPOCHS = 100 
 ENV_STEPS = 5000
 
 

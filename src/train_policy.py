@@ -15,7 +15,6 @@ learning_rate_value = 1e-3
 buffer_size = 100000
 batch_size = 64
 epochs = 1000
-patience = 50
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f"Device: {device}")
 

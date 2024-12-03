@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 class ValueModel(nn.Module):
-    def __init__(self, input_dim, hidden_units=[256, 128, 64, 32, 16, 8]):
+    def __init__(self, input_dim, hidden_units=[128, 64, 32]):
         super(ValueModel, self).__init__()
         layers = []
         for units in hidden_units:

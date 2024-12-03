@@ -1,0 +1,32 @@
+------------------------------------------
+Best Model{
+ValueModel = [128, 64, 32]
+PolicyModel = [128]
+epochs = 2500
+horizon = 25
+}
+------------------------------------------
+Same structure{
+ValueModel = [128, 64, 32, 16, 8, 4]
+PolicyModel = [128, 64, 32, 16, 8, 4]
+epochs = 2500
+horizon = 25
+}
+------------------------------------------
+Different structure{
+ValueModel = [128, 64, 32, 16, 8, 4]
+PolicyModel = [4]
+epochs = 2500
+horizon = 25
+}
+------------------------------------------
+Best structure in performance{
+ValueModel = [256,128,64]
+PolicyModel = [128,128]
+epochs = 2500
+horizon = 25
+}
+BAD performance! Why?
+------------------------------------------
+All other image i have create with the best
+model and different values of horizon etc. 

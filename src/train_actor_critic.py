@@ -14,7 +14,7 @@ print(f"Using device: {device}")
 state_dim = 6    
 action_dim = 3   
 num_episodes = 2500
-imagination_horizon = 30
+imagination_horizon = 25
 
 transition_model = TransitionModel(state_dim, action_dim).to(device)
 reward_model = RewardModel(state_dim).to(device)

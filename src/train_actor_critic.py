@@ -28,7 +28,7 @@ policy_model = PolicyModel(input_dim=state_dim, action_dim=action_dim).to(device
 value_model = ValueModel(input_dim=state_dim).to(device)
 
 policy_optimizer = optim.Adam(policy_model.parameters(), lr=1e-4)
-value_optimizer = optim.Adam(value_model.parameters(), lr=6e-5)
+value_optimizer = optim.Adam(value_model.parameters(), lr=1e-4)
 
 # Funzione per calcolare V_lambda
 def compute_v_lambda(rewards, values, gamma=0.99, lambda_=0.95):
@@ -47,7 +47,7 @@ def compute_v_lambda(rewards, values, gamma=0.99, lambda_=0.95):
 def train_models(policy_model, value_model, num_episodes=100, imagination_horizon=15):
     
     max_grad_norm = 10
-    factor_entropy = 0.05
+    factor_entropy = 0.1
 
     for episode in range(num_episodes):
         state_latent = torch.randn((1, state_dim), dtype=torch.float32, device=device)

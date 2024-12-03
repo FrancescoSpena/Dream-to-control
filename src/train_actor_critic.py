@@ -1,5 +1,8 @@
 import torch
 import torch.optim as optim
+import matplotlib.pyplot as plt
+import numpy as np
+
 from TransitionModel import TransitionModel  
 from RewardModel import RewardModel          
 from PolicyModel import PolicyModel          
@@ -10,7 +13,7 @@ print(f"Using device: {device}")
 
 state_dim = 6    
 action_dim = 3   
-num_episodes = 2600
+num_episodes = 2500
 imagination_horizon = 30
 
 transition_model = TransitionModel(state_dim, action_dim).to(device)
@@ -49,6 +52,9 @@ def train_models(policy_model, value_model, num_episodes=100, imagination_horizo
     max_grad_norm = 10
     factor_entropy = 0.3
 
+    value_losses = []
+    policy_losses = []
+
     for episode in range(num_episodes):
         state_latent = torch.randn((1, state_dim), dtype=torch.float32, device=device)
         state_latent = (state_latent - state_latent.mean()) / (state_latent.std() + 1e-8)
@@ -80,6 +86,7 @@ def train_models(policy_model, value_model, num_episodes=100, imagination_horizo
         with torch.no_grad():
             v_lambda = compute_v_lambda(rewards, values)
         value_loss = ((values.squeeze() - v_lambda) ** 2).mean()
+        value_losses.append(value_loss.item())
 
         value_optimizer.zero_grad()
         value_loss.backward()  
@@ -99,7 +106,8 @@ def train_models(policy_model, value_model, num_episodes=100, imagination_horizo
         
         entropy = action_distribution.entropy().mean()
         policy_loss = -(log_probs * advantages).mean() - factor_entropy * entropy
-
+        policy_losses.append(policy_loss.item())
+        
         policy_optimizer.zero_grad()
         policy_loss.backward()  
         torch.nn.utils.clip_grad_norm_(policy_model.parameters(), max_grad_norm)
@@ -108,14 +116,37 @@ def train_models(policy_model, value_model, num_episodes=100, imagination_horizo
         if episode % 50 == 0:
             print(f"Episode {episode + 1}/{num_episodes}, Value Loss: {value_loss.item():.4f}, Policy Loss: {policy_loss.item():.4f}")
 
+    return value_losses, policy_losses
 
 def save_models(policy_model, value_model, policy_path="../models/policy_model.pth", value_path="../models/value_model.pth"):
     torch.save(policy_model.state_dict(), policy_path)
     torch.save(value_model.state_dict(), value_path)
     print(f"Model saved in:\n - Policy Model: {policy_path}\n - Value Model: {value_path}")
 
+def plot_loss_with_average(loss_values, epochs):
+    if len(loss_values) != epochs:
+        raise ValueError("loss_values different from number of epochs.")
+
+    epoch_numbers = list(range(1, epochs + 1))
+    cumulative_average = np.cumsum(loss_values) / np.arange(1, len(loss_values) + 1)
+    
+    plt.figure(figsize=(10, 6))
+    plt.plot(epoch_numbers, loss_values, label='Loss', color='blue', alpha=0.6)
+    plt.plot(epoch_numbers, cumulative_average, label='Average Loss', color='orange', linewidth=2)
+    
+    plt.title('Loss and Average Loss Trend')
+    plt.xlabel('Epochs')
+    plt.ylabel('Loss')
+    plt.legend()
+    plt.grid(True)
+    plt.show()
+
+
+
 
 if __name__ == "__main__":
     print("Starting training models...")
-    train_models(policy_model, value_model, num_episodes=num_episodes, imagination_horizon=imagination_horizon)
+    val_value, pol_value = train_models(policy_model, value_model, num_episodes=num_episodes, imagination_horizon=imagination_horizon)
+    plot_loss_with_average(val_value,epochs=num_episodes)
+    plot_loss_with_average(pol_value,epochs=num_episodes)
     save_models(policy_model, value_model)

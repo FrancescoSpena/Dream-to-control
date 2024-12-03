@@ -8,7 +8,7 @@ print(f"Using device: {device}")
 
 state_dim = 6  
 action_dim = 3  
-policy_path = "../models/best_policy_model.pth"
+policy_path = "../models/policy_model.pth"
 
 policy_model = PolicyModel(input_dim=state_dim, action_dim=action_dim).to(device)
 policy_model.load_state_dict(torch.load(policy_path, map_location=device))

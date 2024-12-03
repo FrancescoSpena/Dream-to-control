@@ -1,25 +1,26 @@
 import torch
 import torch.optim as optim
-from TransitionModel import TransitionModel  # Modello di transizione
-from RewardModel import RewardModel          # Modello di reward
-from PolicyModel import PolicyModel          # Modello di policy
-from ValueModel import ValueModel            # Modello di valore
+from TransitionModel import TransitionModel  
+from RewardModel import RewardModel          
+from PolicyModel import PolicyModel          
+from ValueModel import ValueModel            
 
-# Configurazione del dispositivo (CPU o GPU)
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f"Using device: {device}")
 
-# Configurazione dei parametri
-state_dim = 6    # Dimensione dello stato per Acrobot-v1
-action_dim = 3   # Numero di azioni discrete
-num_episodes = 100  # Numero di episodi di training
-imagination_horizon = 15  # Lunghezza delle traiettorie immaginate
+state_dim = 6    
+action_dim = 3   
+num_episodes = 2000
+imagination_horizon = 15
 
-# Carica i modelli pre-addestrati e spostali sul dispositivo
 transition_model = TransitionModel(state_dim, action_dim).to(device)
 reward_model = RewardModel(state_dim).to(device)
-transition_model.load_state_dict(torch.load("transition_model.pth", map_location=device))
-reward_model.load_state_dict(torch.load("reward_model.pth", map_location=device))
+
+path_transition = '/home/francesco/Desktop/Dream-to-control/models/transition_model.pth'
+path_reward = '/home/francesco/Desktop/Dream-to-control/models/reward_model.pth'
+
+transition_model.load_state_dict(torch.load(path_transition, map_location=device))
+reward_model.load_state_dict(torch.load(path_reward, map_location=device))
 transition_model.eval()
 reward_model.eval()
 
@@ -28,8 +29,8 @@ policy_model = PolicyModel(input_dim=state_dim, action_dim=action_dim).to(device
 value_model = ValueModel(input_dim=state_dim).to(device)
 
 # Ottimizzatori
-policy_optimizer = optim.Adam(policy_model.parameters(), lr=1e-4)
-value_optimizer = optim.Adam(value_model.parameters(), lr=1e-4)
+policy_optimizer = optim.Adam(policy_model.parameters(), lr=6e-4)
+value_optimizer = optim.Adam(value_model.parameters(), lr=8e-5)
 
 # Funzione per calcolare V_lambda
 def compute_v_lambda(rewards, values, gamma=0.99, lambda_=0.95):
@@ -47,58 +48,64 @@ def compute_v_lambda(rewards, values, gamma=0.99, lambda_=0.95):
 # Training Loop
 def train_models(policy_model, value_model, num_episodes=100, imagination_horizon=15):
     for episode in range(num_episodes):
-        # Stato iniziale casuale nello spazio latente
         state_latent = torch.randn((1, state_dim), dtype=torch.float32, device=device)
 
-        # Immaginazione
         states, actions, rewards = [], [], []
         for _ in range(imagination_horizon):
-            # Politica attuale
+            
             action_probs = policy_model(state_latent)
             action_distribution = torch.distributions.Categorical(action_probs)
             action = action_distribution.sample()
             action_one_hot = torch.nn.functional.one_hot(action, num_classes=action_dim).float().to(device)
 
-            # Modello di transizione e reward
-            next_state_latent = transition_model(state_latent, action_one_hot)
-            reward = reward_model(state_latent).squeeze()
+            next_state_latent = transition_model(state_latent.detach(), action_one_hot)
+            reward = reward_model(state_latent.detach()).squeeze()
 
-            # Salva le transizioni
             states.append(state_latent)
             actions.append(action)
             rewards.append(reward)
 
-            # Aggiorna lo stato latente
             state_latent = next_state_latent
 
         states = torch.cat(states, dim=0)
         actions = torch.stack(actions)
-        rewards = torch.tensor(rewards, device=device)
+        rewards = torch.stack(rewards)
 
         # Critic Update (Value Model)
         values = value_model(states)
         with torch.no_grad():
             v_lambda = compute_v_lambda(rewards, values)
         value_loss = ((values.squeeze() - v_lambda) ** 2).mean()
+
         value_optimizer.zero_grad()
-        value_loss.backward()
+        value_loss.backward()  # No retain_graph here
         value_optimizer.step()
 
+        # Detach states before policy update
+        states = states.detach()
+        actions = actions.detach()
+
         # Actor Update (Policy Model)
-        with torch.no_grad():
-            advantages = (v_lambda - values).squeeze()
-        action_probs = policy_model(states)
+        action_probs = policy_model(states)  # Recompute for a new graph
         action_distribution = torch.distributions.Categorical(action_probs)
         log_probs = action_distribution.log_prob(actions)
-        policy_loss = -(log_probs * advantages).mean()
+        with torch.no_grad():
+            advantages = (v_lambda - values.detach()).squeeze()
+        
+        entropy = action_distribution.entropy().mean()
+        policy_loss = -(log_probs * advantages).mean() - 0.01 * entropy
+
         policy_optimizer.zero_grad()
-        policy_loss.backward()
+        policy_loss.backward()  # Independent graph
         policy_optimizer.step()
 
-        print(f"Episode {episode + 1}/{num_episodes}, Value Loss: {value_loss.item():.4f}, Policy Loss: {policy_loss.item():.4f}")
+        if episode % 10 == 0:
+            print(f"Episode {episode + 1}/{num_episodes}, Value Loss: {value_loss.item():.4f}, Policy Loss: {policy_loss.item():.4f}")
+
+
 
 # Salvataggio dei modelli
-def save_models(policy_model, value_model, policy_path="policy_model.pth", value_path="value_model.pth"):
+def save_models(policy_model, value_model, policy_path="models/policy_model.pth", value_path="models/value_model.pth"):
     torch.save(policy_model.state_dict(), policy_path)
     torch.save(value_model.state_dict(), value_path)
     print(f"Modelli salvati in:\n - Policy Model: {policy_path}\n - Value Model: {value_path}")

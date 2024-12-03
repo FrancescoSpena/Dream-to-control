@@ -10,8 +10,8 @@ print(f"Using device: {device}")
 
 state_dim = 6    
 action_dim = 3   
-num_episodes = 2500
-imagination_horizon = 15
+num_episodes = 2600
+imagination_horizon = 30
 
 transition_model = TransitionModel(state_dim, action_dim).to(device)
 reward_model = RewardModel(state_dim).to(device)
@@ -27,8 +27,8 @@ reward_model.eval()
 policy_model = PolicyModel(input_dim=state_dim, action_dim=action_dim).to(device)
 value_model = ValueModel(input_dim=state_dim).to(device)
 
-policy_optimizer = optim.Adam(policy_model.parameters(), lr=1e-4)
-value_optimizer = optim.Adam(value_model.parameters(), lr=1e-4)
+policy_optimizer = optim.Adam(policy_model.parameters(), lr=2e-5)
+value_optimizer = optim.Adam(value_model.parameters(), lr=2e-5)
 
 # Funzione per calcolare V_lambda
 def compute_v_lambda(rewards, values, gamma=0.99, lambda_=0.95):
@@ -47,7 +47,7 @@ def compute_v_lambda(rewards, values, gamma=0.99, lambda_=0.95):
 def train_models(policy_model, value_model, num_episodes=100, imagination_horizon=15):
     
     max_grad_norm = 10
-    factor_entropy = 0.1
+    factor_entropy = 0.3
 
     for episode in range(num_episodes):
         state_latent = torch.randn((1, state_dim), dtype=torch.float32, device=device)
@@ -105,12 +105,11 @@ def train_models(policy_model, value_model, num_episodes=100, imagination_horizo
         torch.nn.utils.clip_grad_norm_(policy_model.parameters(), max_grad_norm)
         policy_optimizer.step()
 
-    
         if episode % 50 == 0:
             print(f"Episode {episode + 1}/{num_episodes}, Value Loss: {value_loss.item():.4f}, Policy Loss: {policy_loss.item():.4f}")
 
 
-def save_models(policy_model, value_model, policy_path="models/policy_model.pth", value_path="models/value_model.pth"):
+def save_models(policy_model, value_model, policy_path="../models/policy_model.pth", value_path="../models/value_model.pth"):
     torch.save(policy_model.state_dict(), policy_path)
     torch.save(value_model.state_dict(), value_path)
     print(f"Model saved in:\n - Policy Model: {policy_path}\n - Value Model: {value_path}")

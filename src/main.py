@@ -8,7 +8,7 @@ print(f"Using device: {device}")
 
 state_dim = 6  
 action_dim = 3  
-policy_path = "../models/policy_model.pth"
+policy_path = "../models/best_policy_model.pth"
 
 policy_model = PolicyModel(input_dim=state_dim, action_dim=action_dim).to(device)
 policy_model.load_state_dict(torch.load(policy_path, map_location=device))
@@ -40,7 +40,7 @@ if __name__ == "__main__":
     parser.add_argument('--render', action='store_true')
     args = parser.parse_args()
 
-    num_episodes = 1
+    num_episodes = 5
 
     if args.render:
         env = gym.make('Acrobot-v1', render_mode='human')

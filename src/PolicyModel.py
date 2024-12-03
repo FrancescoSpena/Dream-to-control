@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 class PolicyModel(nn.Module):
-    def __init__(self, input_dim, action_dim, hidden_units=[300, 300, 300], dropout_rate=0.2):
+    def __init__(self, input_dim, action_dim, hidden_units=[300, 300, 300, 300], dropout_rate=0.2):
         super(PolicyModel, self).__init__()
         layers = []
 

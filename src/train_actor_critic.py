@@ -10,7 +10,7 @@ print(f"Using device: {device}")
 
 state_dim = 6    
 action_dim = 3   
-num_episodes = 2000
+num_episodes = 2500
 imagination_horizon = 15
 
 transition_model = TransitionModel(state_dim, action_dim).to(device)
@@ -47,8 +47,14 @@ def compute_v_lambda(rewards, values, gamma=0.99, lambda_=0.95):
 
 # Training Loop
 def train_models(policy_model, value_model, num_episodes=100, imagination_horizon=15):
+    
+    max_grad_norm = 10
+    factor_entropy = 0.01
+
     for episode in range(num_episodes):
         state_latent = torch.randn((1, state_dim), dtype=torch.float32, device=device)
+        state_latent = (state_latent - state_latent.mean()) / (state_latent.std() + 1e-8)
+
 
         states, actions, rewards = [], [], []
         for _ in range(imagination_horizon):
@@ -78,7 +84,8 @@ def train_models(policy_model, value_model, num_episodes=100, imagination_horizo
         value_loss = ((values.squeeze() - v_lambda) ** 2).mean()
 
         value_optimizer.zero_grad()
-        value_loss.backward()  # No retain_graph here
+        value_loss.backward()  
+        torch.nn.utils.clip_grad_norm_(value_model.parameters(), max_grad_norm)
         value_optimizer.step()
 
         # Detach states before policy update
@@ -86,20 +93,22 @@ def train_models(policy_model, value_model, num_episodes=100, imagination_horizo
         actions = actions.detach()
 
         # Actor Update (Policy Model)
-        action_probs = policy_model(states)  # Recompute for a new graph
+        action_probs = policy_model(states)  
         action_distribution = torch.distributions.Categorical(action_probs)
         log_probs = action_distribution.log_prob(actions)
         with torch.no_grad():
             advantages = (v_lambda - values.detach()).squeeze()
         
         entropy = action_distribution.entropy().mean()
-        policy_loss = -(log_probs * advantages).mean() - 0.01 * entropy
+        policy_loss = -(log_probs * advantages).mean() - factor_entropy * entropy
 
         policy_optimizer.zero_grad()
-        policy_loss.backward()  # Independent graph
+        policy_loss.backward()  
+        torch.nn.utils.clip_grad_norm_(policy_model.parameters(), max_grad_norm)
         policy_optimizer.step()
 
-        if episode % 10 == 0:
+    
+        if episode % 50 == 0:
             print(f"Episode {episode + 1}/{num_episodes}, Value Loss: {value_loss.item():.4f}, Policy Loss: {policy_loss.item():.4f}")
 
 

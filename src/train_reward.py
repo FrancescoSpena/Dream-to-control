@@ -5,6 +5,7 @@ import torch.optim as optim
 from torch.utils.data import DataLoader, random_split
 import numpy as np
 import matplotlib.pyplot as plt
+from collections import Counter
 
 from RewardModel import RewardModel
 from Dataset import RewardDataset
@@ -35,6 +36,54 @@ def collect_data(env, steps=10000, max_steps=500):
             step_count = 0
 
     return transitions
+
+def collect_balanced_data(env, steps_per_bin, state_dim, reward_bins):
+    transitions = {bin_idx: [] for bin_idx in range(len(reward_bins) - 1)}
+    total_steps = steps_per_bin * (len(reward_bins) - 1)
+    state, _ = env.reset()
+    step_count = 0
+
+    while sum(len(v) for v in transitions.values()) < total_steps:
+        action = env.action_space.sample()
+        next_state, reward, terminated, truncated, _ = env.step(action)
+
+        if not isinstance(state, np.ndarray):
+            state = np.array(state)
+        if state.shape != (state_dim,):
+            state, _ = env.reset()  
+            continue
+
+        # Bin the reward
+        bin_idx = np.digitize(reward, reward_bins) - 1
+        if 0 <= bin_idx < len(reward_bins) - 1:
+            if len(transitions[bin_idx]) < steps_per_bin:
+                transitions[bin_idx].append((state, reward))
+
+        state = next_state
+        step_count += 1
+
+        if terminated or truncated or step_count >= 100:
+            state, _ = env.reset()
+            step_count = 0
+
+    balanced_transitions = [
+        transition for bin_transitions in transitions.values() for transition in bin_transitions
+    ]
+
+    return balanced_transitions
+
+
+def check_balance_rewards(transitions, reward_bins):
+    bin_counts = Counter()
+    for _, reward in transitions:
+        bin_idx = np.digitize(reward, reward_bins) - 1
+        bin_counts[bin_idx] += 1
+
+    for bin_idx in range(len(reward_bins) - 1):
+        print(f"Bin {bin_idx} [{reward_bins[bin_idx]}, {reward_bins[bin_idx + 1]}]: {bin_counts[bin_idx]} samples")
+    
+    return bin_counts
+
 
 def train_model(model, train_loader, val_loader, optimizer, criterion, epochs=50, patience=10, device='cpu'):
     model.to(device)
@@ -114,7 +163,7 @@ def main():
 
     print("Collecting data...")
     transitions = collect_data(env)
-
+    
     dataset = RewardDataset(transitions)
     train_size = int(0.8 * len(dataset))
     val_size = len(dataset) - train_size

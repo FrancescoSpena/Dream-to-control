@@ -24,13 +24,11 @@ reward_model.load_state_dict(torch.load(path_reward, map_location=device))
 transition_model.eval()
 reward_model.eval()
 
-# Inizializza i modelli di policy e valore sul dispositivo
 policy_model = PolicyModel(input_dim=state_dim, action_dim=action_dim).to(device)
 value_model = ValueModel(input_dim=state_dim).to(device)
 
-# Ottimizzatori
-policy_optimizer = optim.Adam(policy_model.parameters(), lr=6e-4)
-value_optimizer = optim.Adam(value_model.parameters(), lr=8e-5)
+policy_optimizer = optim.Adam(policy_model.parameters(), lr=1e-4)
+value_optimizer = optim.Adam(value_model.parameters(), lr=6e-5)
 
 # Funzione per calcolare V_lambda
 def compute_v_lambda(rewards, values, gamma=0.99, lambda_=0.95):
@@ -49,7 +47,7 @@ def compute_v_lambda(rewards, values, gamma=0.99, lambda_=0.95):
 def train_models(policy_model, value_model, num_episodes=100, imagination_horizon=15):
     
     max_grad_norm = 10
-    factor_entropy = 0.01
+    factor_entropy = 0.05
 
     for episode in range(num_episodes):
         state_latent = torch.randn((1, state_dim), dtype=torch.float32, device=device)
@@ -112,15 +110,13 @@ def train_models(policy_model, value_model, num_episodes=100, imagination_horizo
             print(f"Episode {episode + 1}/{num_episodes}, Value Loss: {value_loss.item():.4f}, Policy Loss: {policy_loss.item():.4f}")
 
 
-
-# Salvataggio dei modelli
 def save_models(policy_model, value_model, policy_path="models/policy_model.pth", value_path="models/value_model.pth"):
     torch.save(policy_model.state_dict(), policy_path)
     torch.save(value_model.state_dict(), value_path)
-    print(f"Modelli salvati in:\n - Policy Model: {policy_path}\n - Value Model: {value_path}")
+    print(f"Model saved in:\n - Policy Model: {policy_path}\n - Value Model: {value_path}")
 
-# Main Script
+
 if __name__ == "__main__":
-    print("Inizio addestramento dei modelli...")
+    print("Starting training models...")
     train_models(policy_model, value_model, num_episodes=num_episodes, imagination_horizon=imagination_horizon)
     save_models(policy_model, value_model)

@@ -20,7 +20,7 @@ print(f"Using device: {device}")
 state_dim = 6
 action_dim = 3
 num_episodes = 50
-imagination_horizon = 5
+imagination_horizon = 10
 buffer_capacity = 200
 batch_size = 128
 gamma = 0.99

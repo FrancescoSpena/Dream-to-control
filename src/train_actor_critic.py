@@ -4,28 +4,31 @@ import numpy as np
 import gymnasium as gym
 from collections import deque
 import random
+import matplotlib.pyplot as plt
 
-# Import custom models
 from TransitionModel import TransitionModel  
 from RewardModel import RewardModel          
 from PolicyModel import PolicyModel          
 from ValueModel import ValueModel
 from DiscountModel import DiscountModel
 
-# Device configuration
+torch.cuda.empty_cache()
+print("Cache CUDA empty")
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f"Using device: {device}")
 
-# Hyperparameters
 state_dim = 6
 action_dim = 3
-num_episodes = 50
-imagination_horizon = 10
-buffer_capacity = 200
-batch_size = 128
+
+num_episodes = 200
+imagination_horizon = 25
+
+buffer_capacity = 50
+batch_size = 8
+
 gamma = 0.99
 lambda_ = 0.95
-learning_rate = 2e-5
+learning_rate = 6e-4
 
 # Initialize models
 transition_model = TransitionModel(state_dim, action_dim).to(device)
@@ -38,13 +41,10 @@ policy_optimizer = optim.Adam(policy_model.parameters(), lr=learning_rate)
 value_optimizer = optim.Adam(value_model.parameters(), lr=learning_rate)
 discount_optimizer = optim.Adam(discount_model.parameters(), lr=learning_rate)
 
-# Experience replay buffer
 buffer = deque(maxlen=buffer_capacity)
-
-# Environment setup
 env = gym.make('Acrobot-v1')
 
-# Helper functions
+
 def add_experience(buffer, state, action, reward, next_state, done):
     buffer.append((state, action, reward, next_state, done))
 
@@ -56,6 +56,25 @@ def sample_batch(buffer, batch_size):
         return torch.tensor(np.array([item for item in data]), dtype=torch.float32).to(device)
 
     return preprocess(states), preprocess(actions).long(), preprocess(rewards), preprocess(next_states), preprocess(dones)
+
+def plot_loss_with_average(loss_values, epochs):
+    if len(loss_values) != epochs:
+        raise ValueError("loss_values different from number of epochs.")
+
+    epoch_numbers = list(range(1, epochs + 1))
+    cumulative_average = np.cumsum(loss_values) / np.arange(1, len(loss_values) + 1)
+    
+    plt.figure(figsize=(10, 6))
+    plt.plot(epoch_numbers, loss_values, label='Loss', color='blue', alpha=0.6)
+    plt.plot(epoch_numbers, cumulative_average, label='Average Loss', color='orange', linewidth=2)
+    
+    plt.title('Loss and Average Loss Trend')
+    plt.xlabel('Epochs')
+    plt.ylabel('Loss')
+    plt.legend()
+    plt.grid(True)
+    plt.show()
+
 
 # Compute V_lambda with discount factors and horizon
 def compute_v_lambda_with_discount(rewards, values, discounts, gamma=0.99, lambda_=0.95, horizon=15):
@@ -158,12 +177,17 @@ def save_models(policy_model, value_model, discount_model, policy_path="../model
     torch.save(discount_model.state_dict(), discount_path)
     print(f"Models saved:\n - Policy Model: {policy_path}\n - Value Model: {value_path}\n - Discount Model: {discount_path}")
 
+
 # Main function
 if __name__ == "__main__":
     print("Starting training...")
     value_losses, policy_losses, discount_losses = train_models(
         policy_model, value_model, discount_model, buffer, num_episodes=num_episodes, imagination_horizon=imagination_horizon
     )
+
+    plot_loss_with_average(value_losses,num_episodes)
+    plot_loss_with_average(policy_losses,num_episodes)
+    plot_loss_with_average(discount_losses,num_episodes)
 
     # Save models
     save_models(policy_model, value_model, discount_model)

@@ -20,11 +20,11 @@ print(f"Using device: {device}")
 state_dim = 6
 action_dim = 3
 
-num_episodes = 200
-imagination_horizon = 25
+num_episodes = 100
+imagination_horizon = 10
 
-buffer_capacity = 50
-batch_size = 8
+buffer_capacity = 200
+batch_size = 16
 
 gamma = 0.99
 lambda_ = 0.95
@@ -42,7 +42,10 @@ value_optimizer = optim.Adam(value_model.parameters(), lr=learning_rate)
 discount_optimizer = optim.Adam(discount_model.parameters(), lr=learning_rate)
 
 buffer = deque(maxlen=buffer_capacity)
+
+from gymnasium.wrappers import TimeLimit
 env = gym.make('Acrobot-v1')
+env = TimeLimit(env, max_episode_steps=100)
 
 
 def add_experience(buffer, state, action, reward, next_state, done):
@@ -103,6 +106,7 @@ def train_models(policy_model, value_model, discount_model, buffer, num_episodes
         state, _ = env.reset()
         done = False
         while not done:
+            #print("Simulate env with policy...")
             state_tensor = torch.tensor(state, dtype=torch.float32).unsqueeze(0).to(device)
             action_probs = policy_model(state_tensor)
             action_distribution = torch.distributions.Categorical(action_probs)
@@ -185,9 +189,7 @@ if __name__ == "__main__":
         policy_model, value_model, discount_model, buffer, num_episodes=num_episodes, imagination_horizon=imagination_horizon
     )
 
-    plot_loss_with_average(value_losses,num_episodes)
     plot_loss_with_average(policy_losses,num_episodes)
-    plot_loss_with_average(discount_losses,num_episodes)
 
     # Save models
     save_models(policy_model, value_model, discount_model)

@@ -20,15 +20,15 @@ print(f"Using device: {device}")
 state_dim = 6
 action_dim = 3
 
-num_episodes = 10000
-imagination_horizon = 30
+num_episodes = 3000
+imagination_horizon = 25
 
-buffer_capacity = 5000
-batch_size = 16
+buffer_capacity = 3000
+batch_size = 32
 
 gamma = 0.99
 lambda_ = 0.95
-learning_rate = 2e-4
+learning_rate = 1e-4
 
 # Initialize models
 transition_model = TransitionModel(state_dim, action_dim).to(device)
@@ -45,7 +45,7 @@ buffer = deque(maxlen=buffer_capacity)
 
 from gymnasium.wrappers import TimeLimit
 env = gym.make('Acrobot-v1')
-env = TimeLimit(env, max_episode_steps=200)
+#env = TimeLimit(env, max_episode_steps=200)
 
 
 def add_experience(buffer, state, action, reward, next_state, done):
@@ -106,6 +106,7 @@ def train_models(policy_model, value_model, discount_model, buffer, num_episodes
     for episode in range(num_episodes):
         # Collect experiences from the environment
         if len(buffer) < batch_size:
+            print("Collect exp")
             state, _ = env.reset()
             done = False
             while not done:
@@ -120,6 +121,7 @@ def train_models(policy_model, value_model, discount_model, buffer, num_episodes
         
                 #print(f"Collect new experience, dim_buffer: {len(buffer)}")
         else:
+            #print("Buffer OK!")
             states, actions, rewards, next_states, dones = sample_batch(buffer, batch_size)
 
             # Predict discounts

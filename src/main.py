@@ -40,7 +40,7 @@ if __name__ == "__main__":
     parser.add_argument('--render', action='store_true')
     args = parser.parse_args()
 
-    num_episodes = 1
+    num_episodes = 5
 
     if args.render:
         env = gym.make('Acrobot-v1', render_mode='human')

@@ -20,15 +20,15 @@ print(f"Using device: {device}")
 state_dim = 6
 action_dim = 3
 
-num_episodes = 200
-imagination_horizon = 20
+num_episodes = 10000
+imagination_horizon = 30
 
-buffer_capacity = 200
+buffer_capacity = 5000
 batch_size = 16
 
 gamma = 0.99
 lambda_ = 0.95
-learning_rate = 6e-4
+learning_rate = 2e-4
 
 # Initialize models
 transition_model = TransitionModel(state_dim, action_dim).to(device)
@@ -45,7 +45,7 @@ buffer = deque(maxlen=buffer_capacity)
 
 from gymnasium.wrappers import TimeLimit
 env = gym.make('Acrobot-v1')
-env = TimeLimit(env, max_episode_steps=50)
+env = TimeLimit(env, max_episode_steps=200)
 
 
 def add_experience(buffer, state, action, reward, next_state, done):
@@ -60,12 +60,13 @@ def sample_batch(buffer, batch_size):
 
     return preprocess(states), preprocess(actions).long(), preprocess(rewards), preprocess(next_states), preprocess(dones)
 
-def plot_loss_with_average(loss_values, epochs):
-    if len(loss_values) != epochs:
-        raise ValueError("loss_values different from number of epochs.")
-
+def plot_loss_with_average(loss_values):
+    if not loss_values:
+        raise ValueError("loss_values is empty.")
+    
+    epochs = len(loss_values)
     epoch_numbers = list(range(1, epochs + 1))
-    cumulative_average = np.cumsum(loss_values) / np.arange(1, len(loss_values) + 1)
+    cumulative_average = np.cumsum(loss_values) / np.arange(1, epochs + 1)
     
     plt.figure(figsize=(10, 6))
     plt.plot(epoch_numbers, loss_values, label='Loss', color='blue', alpha=0.6)
@@ -77,6 +78,7 @@ def plot_loss_with_average(loss_values, epochs):
     plt.legend()
     plt.grid(True)
     plt.show()
+
 
 
 # Compute V_lambda with discount factors and horizon
@@ -103,22 +105,21 @@ def train_models(policy_model, value_model, discount_model, buffer, num_episodes
 
     for episode in range(num_episodes):
         # Collect experiences from the environment
-        state, _ = env.reset()
-        done = False
-        while not done:
-            #print("Simulate env with policy...")
-            state_tensor = torch.tensor(state, dtype=torch.float32).unsqueeze(0).to(device)
-            action_probs = policy_model(state_tensor)
-            action_distribution = torch.distributions.Categorical(action_probs)
-            action = action_distribution.sample().item()
-            next_state, reward, done, _, _ = env.step(action)
-            
-            add_experience(buffer, state, action, reward, next_state, done)
-            state = next_state
-
-        print(f"Collect new experience, dim_buffer: {len(buffer)}")
-        # Train if buffer has enough experiences
-        if len(buffer) >= batch_size:
+        if len(buffer) < batch_size:
+            state, _ = env.reset()
+            done = False
+            while not done:
+                state_tensor = torch.tensor(state, dtype=torch.float32).unsqueeze(0).to(device)
+                action_probs = policy_model(state_tensor)
+                action_distribution = torch.distributions.Categorical(action_probs)
+                action = action_distribution.sample().item()
+                next_state, reward, done, _, _ = env.step(action)
+                    
+                add_experience(buffer, state, action, reward, next_state, done)
+                state = next_state
+        
+                #print(f"Collect new experience, dim_buffer: {len(buffer)}")
+        else:
             states, actions, rewards, next_states, dones = sample_batch(buffer, batch_size)
 
             # Predict discounts
@@ -164,13 +165,18 @@ def train_models(policy_model, value_model, discount_model, buffer, num_episodes
             torch.nn.utils.clip_grad_norm_(policy_model.parameters(), max_grad_norm)
             policy_optimizer.step()
 
-        if episode % 1 == 0:
+        if episode % 20 == 0:
+            value_loss_display = f"{value_losses[-1]:.4f}" if value_losses else "N/A"
+            policy_loss_display = f"{policy_losses[-1]:.4f}" if policy_losses else "N/A"
+            discount_loss_display = f"{discount_losses[-1]:.4f}" if discount_losses else "N/A"
+
             print(f"Episode {episode + 1}/{num_episodes}, "
-                  f"Value Loss: {value_loss.item():.4f}, "
-                  f"Policy Loss: {policy_loss.item():.4f}, "
-                  f"Discount Loss: {discount_loss.item():.4f}")
+                  f"Value Loss: {value_loss_display}, "
+                  f"Policy Loss: {policy_loss_display}, "
+                  f"Discount Loss: {discount_loss_display}")
 
     return value_losses, policy_losses, discount_losses
+
 
 # Save models
 def save_models(policy_model, value_model, discount_model, policy_path="../models/policy_model.pth", 
@@ -189,9 +195,9 @@ if __name__ == "__main__":
         policy_model, value_model, discount_model, buffer, num_episodes=num_episodes, imagination_horizon=imagination_horizon
     )
 
-    plot_loss_with_average(value_losses,num_episodes)
-    plot_loss_with_average(policy_losses,num_episodes)
-    plot_loss_with_average(discount_losses,num_episodes)
+    plot_loss_with_average(value_losses)
+    plot_loss_with_average(policy_losses)
+    plot_loss_with_average(discount_losses)
 
     # Save models
     save_models(policy_model, value_model, discount_model)

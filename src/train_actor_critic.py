@@ -21,14 +21,14 @@ state_dim = 6
 action_dim = 3
 
 num_episodes = 2000
-imagination_horizon = 25
+imagination_horizon = 20
 
-buffer_capacity = 1500
-batch_size = 16
+buffer_capacity = 5000
+batch_size = 8
 
 gamma = 0.99
 lambda_ = 0.95
-learning_rate = 1e-4
+learning_rate = 3e-4
 
 # Initialize models
 transition_model = TransitionModel(state_dim, action_dim).to(device)

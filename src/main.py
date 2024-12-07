@@ -2,6 +2,8 @@ import torch
 import gymnasium as gym
 from PolicyModel import PolicyModel
 import argparse
+import matplotlib.pyplot as plt
+import numpy as np
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f"Using device: {device}")
@@ -35,12 +37,31 @@ def simulate_episode(env, policy_model):
 
     return total_reward
 
+def plot_loss_with_average(loss_values):
+    if not loss_values:
+        raise ValueError("loss_values is empty.")
+    
+    epochs = len(loss_values)
+    epoch_numbers = list(range(1, epochs + 1))
+    cumulative_average = np.cumsum(loss_values) / np.arange(1, epochs + 1)
+    
+    plt.figure(figsize=(10, 6))
+    plt.plot(epoch_numbers, loss_values, label='Loss', color='blue', alpha=0.6)
+    plt.plot(epoch_numbers, cumulative_average, label='Average Loss', color='orange', linewidth=2)
+    
+    plt.title('Loss and Average Loss Trend')
+    plt.xlabel('Epochs')
+    plt.ylabel('Loss')
+    plt.legend()
+    plt.grid(True)
+    plt.show()
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Run training and evaluation')
     parser.add_argument('--render', action='store_true')
     args = parser.parse_args()
 
-    num_episodes = 20
+    num_episodes = 1000
 
     if args.render:
         env = gym.make('Acrobot-v1', render_mode='human')
@@ -54,5 +75,7 @@ if __name__ == "__main__":
         rewards.append(total_reward)
         print(f"Episode {episode + 1}/{num_episodes}: Total Reward = {total_reward:.2f}")
 
+    plot_loss_with_average(rewards)
+    
     env.close()
     print(f"Average Reward over {num_episodes} episodes: {sum(rewards) / num_episodes:.2f}")

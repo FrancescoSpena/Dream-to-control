@@ -20,9 +20,9 @@ print(f"Using device: {device}")
 state_dim = 6
 action_dim = 3
 
-num_episodes = 200000
+num_episodes = 200
 imagination_horizon = 25
-buffer_capacity = 5000
+buffer_capacity = 2000
 batch_size = 8
 
 gamma = 0.99
@@ -132,7 +132,19 @@ def train_models(policy_model, value_model, discount_model, buffer, num_episodes
             values = value_model(states).squeeze()
             next_values = value_model(next_states).squeeze()
             td_targets = rewards + gamma * predicted_discounts * next_values * (1 - dones)
-            value_loss = ((values - td_targets.detach()) ** 2).mean()
+            #MSE
+            #value_loss = ((values - td_targets.detach()) ** 2).mean()
+
+            #Huber Loss 
+            #value_loss = torch.nn.functional.huber_loss(values, td_targets.detach(), delta=1.0)
+
+            #Regularization-Based Loss L = L_value + lamda * || phi ||_2
+            l2_lambda = 1e-4
+            l2_norm = sum(param.pow(2.0).sum() for param in value_model.parameters())
+            value_loss = ((values - td_targets.detach()) ** 2).mean() + l2_lambda * l2_norm
+            
+            #SmoothL1 Loss
+            #value_loss = torch.nn.SmoothL1Loss()(values, td_targets.detach())
             value_losses.append(value_loss.item())
             
             value_optimizer.zero_grad()

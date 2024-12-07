@@ -10,7 +10,7 @@ print(f"Using device: {device}")
 
 state_dim = 6  
 action_dim = 3  
-policy_path = "../models/policy_model.pth"
+policy_path = "../models/Original_loss_policy_model.pth"
 
 policy_model = PolicyModel(input_dim=state_dim, action_dim=action_dim).to(device)
 policy_model.load_state_dict(torch.load(policy_path, map_location=device))
@@ -61,7 +61,7 @@ if __name__ == "__main__":
     parser.add_argument('--render', action='store_true')
     args = parser.parse_args()
 
-    num_episodes = 1000
+    num_episodes = 1
 
     if args.render:
         env = gym.make('Acrobot-v1', render_mode='human')
@@ -74,8 +74,8 @@ if __name__ == "__main__":
         total_reward = simulate_episode(env, policy_model)
         rewards.append(total_reward)
         print(f"Episode {episode + 1}/{num_episodes}: Total Reward = {total_reward:.2f}")
-
-    plot_loss_with_average(rewards)
+    
+    #plot_loss_with_average(rewards)
     
     env.close()
     print(f"Average Reward over {num_episodes} episodes: {sum(rewards) / num_episodes:.2f}")

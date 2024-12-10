@@ -5,6 +5,7 @@ import argparse
 import matplotlib.pyplot as plt
 import numpy as np
 from stable_baselines3 import PPO
+import pandas as pd
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f"Using device: {device}")
@@ -78,12 +79,12 @@ def plot_reward_comparison_with_average(reward_original, reward_ppo):
     plt.figure(figsize=(12, 7))
     
     # Plot del reward originale e della sua media cumulativa
-    plt.plot(epoch_numbers, reward_original, label='Reward Original Model', color='#1E90FF', alpha=0.6)  # Blu chiaro
-    plt.plot(epoch_numbers, cumulative_average_original, label='Average Reward Original Model', color='#00008B', linewidth=2)  # Blu scuro
+    plt.plot(epoch_numbers, reward_original, label='Reward Original Model', color='#4DBEEE', alpha=0.6)  # Blu chiaro
+    plt.plot(epoch_numbers, cumulative_average_original, label='Average Reward Original Model', color='#0072BD', linewidth=2)  # Blu scuro
     
     # Plot del reward PPO e della sua media cumulativa 
-    plt.plot(epoch_numbers, reward_ppo, label='Reward PPO', color='#e699ff', alpha=0.6)  
-    plt.plot(epoch_numbers, cumulative_average_ppo, label='Average Reward PPO', color='#600080', linewidth=2) 
+    plt.plot(epoch_numbers, reward_ppo, label='Reward PPO', color='#d0e9af', alpha=0.6)  
+    plt.plot(epoch_numbers, cumulative_average_ppo, label='Average Reward PPO', color='#77AC30', linewidth=2) 
     # Titoli e etichette degli assi
     plt.title('Comparison of Original and PPO Rewards')
     plt.xlabel('Epochs')
@@ -93,6 +94,15 @@ def plot_reward_comparison_with_average(reward_original, reward_ppo):
     
     # Mostra il grafico
     plt.show()
+
+def save_rewards_to_csv(rewards, reward_ppo, filename):
+    data = {
+        "Original_Reward": rewards,
+        "PPO_Reward": reward_ppo
+    }
+    df = pd.DataFrame(data)
+    df.to_csv(filename, index=False)
+    print(f"Rewards saved to {filename}")
 
 
 if __name__ == "__main__":
@@ -136,6 +146,7 @@ if __name__ == "__main__":
     
     plot_reward_comparison_with_average(rewards,reward_ppo)
     #plot_loss_with_average(rewards)
+    save_rewards_to_csv(rewards, reward_ppo, "rewards_data.csv")
     
     env.close()
     #print(f"Average Reward over {num_episodes} episodes: {sum(rewards) / num_episodes:.2f}")

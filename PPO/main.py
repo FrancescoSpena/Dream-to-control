@@ -27,7 +27,7 @@ def plot_loss_with_average(loss_values):
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f"Using device: {device}")
 
-env = gym.make("Acrobot-v1")
+env = gym.make("Acrobot-v1", render_mode='human')
 model = PPO("MlpPolicy", env, device=device)
 
 # Load the saved weights into the policy
@@ -38,7 +38,7 @@ print("Model loaded from ppo_acrobot.pth")
 if __name__ == '__main__':
 
     value_reward = []
-    episodes = 10000
+    episodes = 1
     for episode in range(episodes):
         obs, info = env.reset()
         total_reward = 0
@@ -59,7 +59,7 @@ if __name__ == '__main__':
             print(f"Episode {episode + 1}: Total Reward = {total_reward}")
 
     
-    plot_loss_with_average(value_reward)
+    #plot_loss_with_average(value_reward)
     env.close()
 
     

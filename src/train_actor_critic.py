@@ -183,7 +183,7 @@ def train_models(policy_model, value_model, discount_model, buffer, num_episodes
             kl_loss = kl_divergence(action_distribution.logits, target_logits)
 
             
-            policy_loss = -(log_probs * advantages.detach()).mean() - factor_entropy * entropy + 0.01 * kl_loss
+            policy_loss = -(log_probs * advantages.detach()).mean() - factor_entropy * entropy 
             policy_losses.append(policy_loss.item())
             
             policy_optimizer.zero_grad()

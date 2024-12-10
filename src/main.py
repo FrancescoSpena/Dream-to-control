@@ -101,7 +101,7 @@ if __name__ == "__main__":
     parser.add_argument('--ep', action='store_true')
     args = parser.parse_args()
 
-    num_episodes = 1000
+    num_episodes = 10000
 
     if args.render:
         env = gym.make('Acrobot-v1', render_mode='human')

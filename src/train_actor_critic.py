@@ -5,6 +5,8 @@ import gymnasium as gym
 from collections import deque
 import random
 import matplotlib.pyplot as plt
+import torch.nn.functional as F
+
 
 from TransitionModel import TransitionModel  
 from RewardModel import RewardModel          
@@ -20,7 +22,7 @@ print(f"Using device: {device}")
 state_dim = 6
 action_dim = 3
 
-num_episodes = 200
+num_episodes = 200000
 imagination_horizon = 25
 buffer_capacity = 2000
 batch_size = 8
@@ -95,6 +97,13 @@ def compute_v_lambda_with_discount(rewards, values, discounts, gamma=0.99, lambd
             next_value = values[i, t]
     return v_lambdas
 
+
+def kl_divergence(p_logits, q_logits):
+    p_probs = F.softmax(p_logits, dim=-1)
+    q_probs = F.softmax(q_logits, dim=-1)
+    return torch.sum(p_probs * (torch.log(p_probs + 1e-10) - torch.log(q_probs + 1e-10)), dim=-1).mean()
+
+
 # Training loop
 def train_models(policy_model, value_model, discount_model, buffer, num_episodes=100, imagination_horizon=15):
     max_grad_norm = 10
@@ -133,15 +142,15 @@ def train_models(policy_model, value_model, discount_model, buffer, num_episodes
             next_values = value_model(next_states).squeeze()
             td_targets = rewards + gamma * predicted_discounts * next_values * (1 - dones)
             #MSE
-            #value_loss = ((values - td_targets.detach()) ** 2).mean()
+            value_loss = ((values - td_targets.detach()) ** 2).mean()
 
             #Huber Loss 
             #value_loss = torch.nn.functional.huber_loss(values, td_targets.detach(), delta=1.0)
 
             #Regularization-Based Loss L = L_value + lamda * || phi ||_2
-            l2_lambda = 1e-4
-            l2_norm = sum(param.pow(2.0).sum() for param in value_model.parameters())
-            value_loss = ((values - td_targets.detach()) ** 2).mean() + l2_lambda * l2_norm
+            # l2_lambda = 1e-4
+            # l2_norm = sum(param.pow(2.0).sum() for param in value_model.parameters())
+            # value_loss = ((values - td_targets.detach()) ** 2).mean() + l2_lambda * l2_norm
             
             #SmoothL1 Loss
             #value_loss = torch.nn.SmoothL1Loss()(values, td_targets.detach())
@@ -166,7 +175,15 @@ def train_models(policy_model, value_model, discount_model, buffer, num_episodes
             action_distribution = torch.distributions.Categorical(action_probs)
             log_probs = action_distribution.log_prob(actions)
             entropy = action_distribution.entropy().mean()
-            policy_loss = -(log_probs * advantages.detach()).mean() - factor_entropy * entropy
+            
+            #uniform distribution
+            target_logits = torch.zeros_like(action_probs)
+            target_distribution = torch.distributions.Categorical(logits=target_logits)
+            
+            kl_loss = kl_divergence(action_distribution.logits, target_logits)
+
+            
+            policy_loss = -(log_probs * advantages.detach()).mean() - factor_entropy * entropy + 0.01 * kl_loss
             policy_losses.append(policy_loss.item())
             
             policy_optimizer.zero_grad()

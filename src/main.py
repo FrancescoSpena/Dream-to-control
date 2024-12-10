@@ -132,6 +132,7 @@ if __name__ == "__main__":
     
         obs, info = env.reset()
         done = False
+        total_reward = 0
         while not done:
             action, _states = ppo_model.predict(obs, deterministic=True)
 

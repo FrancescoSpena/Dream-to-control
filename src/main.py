@@ -24,13 +24,14 @@ def simulate_episode(env, policy_model):
 
     terminated = False
     truncated = False
+    done = False
     while not (terminated or truncated):
         with torch.no_grad():
             action_probs = policy_model(state_tensor)
             action_distribution = torch.distributions.Categorical(action_probs)
             action = action_distribution.sample().item()
 
-        next_state, reward, terminated, truncated, _ = env.step(action)
+        next_state, reward, terminated, truncated, done = env.step(action)
         total_reward += reward
 
         state_tensor = torch.tensor(next_state, dtype=torch.float32, device=device).unsqueeze(0)

@@ -55,7 +55,7 @@ if __name__ == '__main__':
         
         value_reward.append(total_reward)
         
-        if episode % 10 == 0:
+        if episode % 1 == 0:
             print(f"Episode {episode + 1}: Total Reward = {total_reward}")
 
     

@@ -12,7 +12,7 @@ print(f"Using device: {device}")
 
 state_dim = 6  
 action_dim = 3  
-policy_path = "../models/L1_policy_model.pth"
+policy_path = "../models/Original_loss_policy_model.pth"
 
 policy_model = PolicyModel(input_dim=state_dim, action_dim=action_dim).to(device)
 policy_model.load_state_dict(torch.load(policy_path, map_location=device))
@@ -71,28 +71,25 @@ def plot_reward_comparison_with_average(reward_original, reward_ppo):
     epochs = len(reward_original)
     epoch_numbers = list(range(1, epochs + 1))
     
-    # Calcolo delle medie cumulative
     cumulative_average_original = np.cumsum(reward_original) / np.arange(1, epochs + 1)
     cumulative_average_ppo = np.cumsum(reward_ppo) / np.arange(1, epochs + 1)
     
-    # Creazione del grafico
     plt.figure(figsize=(12, 7))
     
-    # Plot del reward originale e della sua media cumulativa
+    # Plot dreamer reward and mean
     plt.plot(epoch_numbers, reward_original, label='Reward Original Model with KL', color='#4DBEEE', alpha=0.6)  # Blu chiaro
     plt.plot(epoch_numbers, cumulative_average_original, label='Average Reward Original Model', color='#0072BD', linewidth=2)  # Blu scuro
     
-    # Plot del reward PPO e della sua media cumulativa 
+    # Plot reward PPO and mean 
     plt.plot(epoch_numbers, reward_ppo, label='Reward PPO', color='#d0e9af', alpha=0.6)  
     plt.plot(epoch_numbers, cumulative_average_ppo, label='Average Reward PPO', color='#77AC30', linewidth=2) 
-    # Titoli e etichette degli assi
+    
+    # Title and labels
     plt.title('Comparison of Original and PPO Rewards')
     plt.xlabel('Epochs')
     plt.ylabel('Reward')
     plt.legend()
     plt.grid(True)
-    
-    # Mostra il grafico
     plt.show()
 
 def save_rewards_to_csv(rewards, reward_ppo, filename):

@@ -5,7 +5,6 @@ class RewardModel(nn.Module):
     def __init__(self, state_dim, hidden_units=[32, 32], activation=nn.ReLU):
         super(RewardModel, self).__init__()
 
-        # Livelli nascosti
         layers = []
         input_dim = state_dim
         for units in hidden_units:

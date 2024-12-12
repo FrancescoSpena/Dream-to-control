@@ -144,6 +144,7 @@ def train_models(policy_model, value_model, discount_model, buffer, num_episodes
             #MSE
             value_loss = ((values - td_targets.detach()) ** 2).mean()
 
+            #------------------TEST-----------------------------------
             #Huber Loss 
             #value_loss = torch.nn.functional.huber_loss(values, td_targets.detach(), delta=1.0)
 
@@ -154,8 +155,9 @@ def train_models(policy_model, value_model, discount_model, buffer, num_episodes
             
             #SmoothL1 Loss
             #value_loss = torch.nn.SmoothL1Loss()(values, td_targets.detach())
+            #------------------TEST-----------------------------------
+
             value_losses.append(value_loss.item())
-            
             value_optimizer.zero_grad()
             value_loss.backward()
             torch.nn.utils.clip_grad_norm_(value_model.parameters(), max_grad_norm)

@@ -43,20 +43,32 @@ pip install -r requirements.txt
 4. (Optional) If you want to use a GPU for faster training, make sure you have the necessary CUDA dependencies installed.
 
 ## Usage 
-The agent used 3 different neural model. For this reason, first of all we train the model that approximate the transition function of the environment. 
-### Train 
-To train the neural model for the transition function we can run the following command: 
-
+The agent utilizes three different neural models. Therefore, the first step is to train the model that approximates the environment's transition function.
+### Training
+To train the different neural models, run the following commands:
+- Transition function model:
 ```bash
-cd Dream-to-control/src/ && python3 train_transition.py
+cd src/ && python3 train_transition.py
 ```
 
-To train the neural model for the reward function we can run the following command: 
-
+- Reward function model:
 ```bash
 python3 train_reward.py
 ```
 
-### Test
+Actor-critic model: 
+
+```bash
+python3 train_actor_critic.py
+```
+
+### Testing 
+To test the trained model and run the environment, use the following command:
+```bash
+python3 main.py --render
+```
+Available options:
+- --render: displays the graphical environment during execution.
+
 
    

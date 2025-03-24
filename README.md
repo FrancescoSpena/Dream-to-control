@@ -43,9 +43,20 @@ pip install -r requirements.txt
 4. (Optional) If you want to use a GPU for faster training, make sure you have the necessary CUDA dependencies installed.
 
 ## Usage 
-To train the Dreamer agent on the Acrobot task, follow this simple steps:
-1.
-2.
+The agent used 3 different neural model. For this reason, first of all we train the model that approximate the transition function of the environment. 
+### Train 
+To train the neural model for the transition function we can run the following command: 
 
+```bash
+cd Dream-to-control/src/ && python3 train_transition.py
+```
+
+To train the neural model for the reward function we can run the following command: 
+
+```bash
+python3 train_reward.py
+```
+
+### Test
 
    

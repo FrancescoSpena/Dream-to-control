@@ -22,7 +22,7 @@ print(f"Using device: {device}")
 state_dim = 6
 action_dim = 3
 
-num_episodes = 200000
+num_episodes = 500
 imagination_horizon = 25
 buffer_capacity = 2000
 batch_size = 8
@@ -207,7 +207,7 @@ def train_models(policy_model, value_model, discount_model, buffer, num_episodes
 
 
 # Save models
-def save_models(policy_model, value_model, discount_model, policy_path="../models/policy_model.pth", 
+def save_models(policy_model, value_model, discount_model, policy_path="../models/new_policy_model.pth", 
                 value_path="../models/value_model.pth", discount_path="../models/discount_model.pth"):
     
     torch.save(policy_model.state_dict(), policy_path)

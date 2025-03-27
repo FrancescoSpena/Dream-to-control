@@ -70,5 +70,15 @@ python3 main.py --render
 Available options:
 - --render: displays the graphical environment during execution.
 
+## Acknowledgments
+* The original paper:
 
+```bib
+@article{hafner2019dreamer,
+  title={Dream to Control: Learning Behaviors by Latent Imagination},
+  author={Hafner, Danijar and Lillicrap, Timothy and Ba, Jimmy and Norouzi, Mohammad},
+  journal={arXiv preprint arXiv:1912.01603},
+  year={2019}
+}
+```
    
